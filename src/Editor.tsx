@@ -315,7 +315,9 @@ export default function Editor(props: EditorProps) {
   }, [separator, context])
 
   function download() {
-    const currRender = renders.at(-1) ?? original
+    // 兼容旧版本浏览器的 at 方法
+    const currRender =
+      renders.length > 0 ? renders[renders.length - 1] : original
     downloadImage(currRender.currentSrc, 'IMG')
   }
 
@@ -466,7 +468,8 @@ export default function Editor(props: EditorProps) {
       const start = Date.now()
       console.log('superResolution_start')
       // each time based on the last result, the first is the original
-      const newFile = renders.at(-1) ?? file
+      // 兼容旧版本浏览器的 at 方法
+      const newFile = renders.length > 0 ? renders[renders.length - 1] : file
       const res = await superResolution(newFile, setGenerateProgress)
       if (!res) {
         throw new Error('empty response')
