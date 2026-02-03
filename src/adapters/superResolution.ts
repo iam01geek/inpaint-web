@@ -212,27 +212,34 @@ function configEnv(capabilities: {
   console.log('env', ort.env.wasm)
 }
 function postProcess(floatData: Float32Array, width: number, height: number) {
-  const chwToHwcData = []
   const size = width * height
+  // 计算总元素个数 (RGBA)
+  const totalElements = width * height * 4
+
+  // --- 关键修复：使用类型化数组替代普通数组 ---
+  // Uint8ClampedArray 专门用于图像数据，自动限制 0-255，且内存连续
+  const chwToHwcData = new Uint8ClampedArray(totalElements)
+
+  let index = 0 // 用于追踪当前写入的位置
 
   for (let h = 0; h < height; h++) {
     for (let w = 0; w < width; w++) {
       for (let c = 0; c < 3; c++) {
-        // RGB通道
         const chwIndex = c * size + h * width + w
-        const pixelVal = floatData[chwIndex]
-        let newPiex = pixelVal
-        if (pixelVal > 1) {
-          newPiex = 1
-        } else if (pixelVal < 0) {
-          newPiex = 0
-        }
-        chwToHwcData.push(newPiex * 255) // 归一化反转
+        let pixelVal = floatData[chwIndex]
+
+        // 边界保护
+        if (pixelVal > 1) pixelVal = 1
+        else if (pixelVal < 0) pixelVal = 0
+
+        // 直接赋值，不需要 push
+        chwToHwcData[index++] = pixelVal * 255
       }
-      chwToHwcData.push(255) // Alpha通道
+      chwToHwcData[index++] = 255 // Alpha
     }
   }
-  return chwToHwcData
+
+  return chwToHwcData // 返回类型化数组
 }
 
 function imageDataToDataURL(imageData: ImageData) {
@@ -286,11 +293,7 @@ export default async function superResolution(
     img.width * 4,
     img.height * 4
   )
-  const imageData = new ImageData(
-    new Uint8ClampedArray(chwToHwcData),
-    img.width * 4,
-    img.height * 4
-  )
+  const imageData = new ImageData(chwToHwcData, img.width * 4, img.height * 4)
   console.log(imageData, 'imageData')
   const url = imageDataToDataURL(imageData)
   console.timeEnd('postProcess')
