@@ -125,10 +125,18 @@ export async function downloadModel(
   modelType: modelType,
   setDownloadProgress: (arg0: number) => void
 ) {
+  // First check if model already exists in cache
   if (await modelExists(modelType)) {
     return
   }
 
+  // Second try to load from local file
+  const localModel = await loadModelFromLocalFile(modelType)
+  if (localModel) {
+    return
+  }
+
+  // Finally fall back to network download
   async function downloadFromUrl(url: string) {
     // eslint-disable-next-line no-console
     console.log('start download from', url)
